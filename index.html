@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PAN & VAT Bill Credit/Debit Ledger</title>
+  <title>Customer Ledger</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -82,8 +82,9 @@
 </head>
 <body>
   <div class="container">
-    <h1>PAN & VAT Credit/Debit Ledger</h1>
+    <h1>Customer Ledger</h1>
     <form id="ledgerForm">
+      <input type="text" id="customerName" placeholder="Customer Name" required />
       <input type="text" id="taskDescription" placeholder="Task Description" required />
       <input type="number" id="debit" placeholder="Debit Amount" min="0" step="0.01" />
       <input type="number" id="credit" placeholder="Credit Amount" min="0" step="0.01" />
@@ -99,22 +100,43 @@
       <p><strong>Total Credit:</strong> <span id="totalCredit">0</span></p>
       <p><strong>Balance:</strong> <span id="balance">0</span></p>
     </div>
+
+    <button class="btn" id="saveButton">Save Data</button>
+    <button class="btn btn-reset" onclick="resetData()">Reset Data</button>
   </div>
 
   <script>
     let totalDebit = 0;
     let totalCredit = 0;
     let balance = 0;
+    let customerName = '';
     const ledgerForm = document.getElementById('ledgerForm');
     const ledgerContainer = document.getElementById('ledgerContainer');
     const totalDebitEl = document.getElementById('totalDebit');
     const totalCreditEl = document.getElementById('totalCredit');
     const balanceEl = document.getElementById('balance');
+    const saveButton = document.getElementById('saveButton');
     const entriesByDate = {};
 
+    // Load saved data on page load
+    window.onload = function () {
+      const savedData = JSON.parse(localStorage.getItem('customerLedger'));
+      if (savedData) {
+        customerName = savedData.customerName;
+        entriesByDate = savedData.entriesByDate;
+        totalDebit = savedData.totalDebit;
+        totalCredit = savedData.totalCredit;
+        balance = savedData.balance;
+        document.getElementById('customerName').value = customerName;
+        updateLedgerDisplay();
+      }
+    };
+
+    // Add entry
     ledgerForm.addEventListener('submit', (event) => {
       event.preventDefault();
 
+      customerName = document.getElementById('customerName').value;
       const taskDescription = document.getElementById('taskDescription').value;
       const debit = parseFloat(document.getElementById('debit').value) || 0;
       const credit = parseFloat(document.getElementById('credit').value) || 0;
@@ -124,7 +146,6 @@
       const totalDebitForEntry = debit * quantity;
       const totalCreditForEntry = credit * quantity;
 
-      // Calculate new balance
       const newBalance = balance + totalDebitForEntry - totalCreditForEntry;
 
       // Group entries by date
@@ -148,10 +169,11 @@
 
       updateLedgerDisplay();
 
-      // Reset the form fields
+      // Reset form
       ledgerForm.reset();
     });
 
+    // Update ledger display
     function updateLedgerDisplay() {
       ledgerContainer.innerHTML = '';
 
@@ -197,26 +219,23 @@
         ledgerContainer.appendChild(dateGroup);
       }
 
-      // Update the totals
       totalDebitEl.textContent = totalDebit.toFixed(2);
       totalCreditEl.textContent = totalCredit.toFixed(2);
       balanceEl.textContent = balance.toFixed(2);
     }
 
+    // Remove entry
     function removeEntry(date, index) {
       const entry = entriesByDate[date][index];
       const debit = entry.debit;
       const credit = entry.credit;
 
-      // Remove the entry from the date's group
       entriesByDate[date].splice(index, 1);
 
-      // Update the totals and balance
       totalDebit -= debit;
       totalCredit -= credit;
       balance -= debit - credit;
 
-      // If no entries are left for the date, remove the entire date group
       if (entriesByDate[date].length === 0) {
         delete entriesByDate[date];
       }
@@ -224,21 +243,19 @@
       updateLedgerDisplay();
     }
 
+    // Edit entry
     function editEntry(index, date, field, newValue) {
       const entry = entriesByDate[date][index];
       entry[field] = newValue;
 
-      // Recalculate the debit, credit, and balance after editing
       const totalDebitForEntry = entry.debit * entry.quantity;
       const totalCreditForEntry = entry.credit * entry.quantity;
       entry.balance = totalDebitForEntry - totalCreditForEntry;
 
-      // Recalculate the running totals
       totalDebit = 0;
       totalCredit = 0;
       balance = 0;
 
-      // Update the entries and totals
       for (const dateKey in entriesByDate) {
         entriesByDate[dateKey].forEach(entry => {
           totalDebit += entry.debit;
@@ -248,6 +265,27 @@
       }
 
       updateLedgerDisplay();
+    }
+
+    // Save Data to Local Storage
+    saveButton.addEventListener('click', () => {
+      const dataToSave = {
+        customerName,
+        entriesByDate,
+        totalDebit,
+        totalCredit,
+        balance
+      };
+      localStorage.setItem('customerLedger', JSON.stringify(dataToSave));
+      alert('Data saved successfully!');
+    });
+
+    // Reset data
+    function resetData() {
+      if (confirm('Are you sure you want to reset the data?')) {
+        localStorage.removeItem('customerLedger');
+        window.location.reload();
+      }
     }
   </script>
 </body>
