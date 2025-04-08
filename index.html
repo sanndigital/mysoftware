@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PAN & VAT Bill Credit/Debit Ledger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    input, select {
+      padding: 5px;
+      width: 90%;
+      margin: 5px 0;
+    }
+    .btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn-reset {
+      background-color: #ffc107;
+      color: black;
+    }
+    .btn-remove {
+      background-color: #dc3545;
+      color: white;
+    }
+    #totals {
+      margin-top: 25px;
+      font-size: 16px;
+      background-color: #eef;
+      padding: 15px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PAN & VAT Credit/Debit Ledger</h1>
+    <form id="ledgerForm">
+      <input type="text" id="transactionDescription" placeholder="Description" required />
+      <input type="number" id="debit" placeholder="Debit Amount" min="0" step="0.01" />
+      <input type="number" id="credit" placeholder="Credit Amount" min="0" step="0.01" />
+      <input type="date" id="transactionDate" required />
+      <button type="submit" class="btn">Add Entry</button>
+    </form>
+
+    <table id="ledgerTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Balance</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="ledgerBody"></tbody>
+    </table>
+
+    <div id="totals">
+      <p><strong>Total Debit:</strong> <span id="totalDebit">0</span></p>
+      <p><strong>Total Credit:</strong> <span id="totalCredit">0</span></p>
+      <p><strong>Balance:</strong> <span id="balance">0</span></p>
+    </div>
+  </div>
+
+  <script>
+    let totalDebit = 0;
+    let totalCredit = 0;
+    let balance = 0;
+
+    const ledgerForm = document.getElementById('ledgerForm');
+    const ledgerTable = document.getElementById('ledgerTable');
+    const ledgerBody = document.getElementById('ledgerBody');
+    const totalDebitEl = document.getElementById('totalDebit');
+    const totalCreditEl = document.getElementById('totalCredit');
+    const balanceEl = document.getElementById('balance');
+
+    ledgerForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const description = document.getElementById('transactionDescription').value;
+      const debit = parseFloat(document.getElementById('debit').value) || 0;
+      const credit = parseFloat(document.getElementById('credit').value) || 0;
+      const date = document.getElementById('transactionDate').value;
+
+      const newBalance = balance + debit - credit;
+
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = `
+        <td>${date}</td>
+        <td>${description}</td>
+        <td>${debit.toFixed(2)}</td>
+        <td>${credit.toFixed(2)}</td>
+        <td>${newBalance.toFixed(2)}</td>
+        <td><button class="btn-remove" onclick="removeEntry(this)">Remove</button></td>
+      `;
+      ledgerBody.appendChild(newRow);
+
+      totalDebit += debit;
+      totalCredit += credit;
+      balance = newBalance;
+
+      totalDebitEl.textContent = totalDebit.toFixed(2);
+      totalCreditEl.textContent = totalCredit.toFixed(2);
+      balanceEl.textContent = balance.toFixed(2);
+
+      ledgerForm.reset();
+    });
+
+    function removeEntry(button) {
+      const row = button.parentElement.parentElement;
+      const debit = parseFloat(row.children[2].textContent);
+      const credit = parseFloat(row.children[3].textContent);
+
+      totalDebit -= debit;
+      totalCredit -= credit;
+      balance -= debit - credit;
+
+      row.remove();
+
+      totalDebitEl.textContent = totalDebit.toFixed(2);
+      totalCreditEl.textContent = totalCredit.toFixed(2);
+      balanceEl.textContent = balance.toFixed(2);
+    }
+  </script>
+</body>
+</html>
