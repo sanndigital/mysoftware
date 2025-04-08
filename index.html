@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Piya Sir Hisab Bill Credit/Debit Ledger</title>
+  <title>PAN & VAT Bill Credit/Debit Ledger</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,6 +58,10 @@
       background-color: #dc3545;
       color: white;
     }
+    .btn-edit {
+      background-color: #007bff;
+      color: white;
+    }
     #totals {
       margin-top: 25px;
       font-size: 16px;
@@ -65,32 +69,30 @@
       padding: 15px;
       border-radius: 8px;
     }
+    .date-group {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+    }
+    .date-group h3 {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Piya Sir Hisab Bill/Debit Ledger</h1>
+    <h1>PAN & VAT Credit/Debit Ledger</h1>
     <form id="ledgerForm">
-      <input type="text" id="transactionDescription" placeholder="Description" required />
+      <input type="text" id="taskDescription" placeholder="Task Description" required />
       <input type="number" id="debit" placeholder="Debit Amount" min="0" step="0.01" />
       <input type="number" id="credit" placeholder="Credit Amount" min="0" step="0.01" />
+      <input type="number" id="quantity" placeholder="Quantity" min="1" value="1" />
       <input type="date" id="transactionDate" required />
       <button type="submit" class="btn">Add Entry</button>
     </form>
 
-    <table id="ledgerTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Description</th>
-          <th>Debit</th>
-          <th>Credit</th>
-          <th>Balance</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="ledgerBody"></tbody>
-    </table>
+    <div id="ledgerContainer"></div>
 
     <div id="totals">
       <p><strong>Total Debit:</strong> <span id="totalDebit">0</span></p>
@@ -103,60 +105,149 @@
     let totalDebit = 0;
     let totalCredit = 0;
     let balance = 0;
-
     const ledgerForm = document.getElementById('ledgerForm');
-    const ledgerTable = document.getElementById('ledgerTable');
-    const ledgerBody = document.getElementById('ledgerBody');
+    const ledgerContainer = document.getElementById('ledgerContainer');
     const totalDebitEl = document.getElementById('totalDebit');
     const totalCreditEl = document.getElementById('totalCredit');
     const balanceEl = document.getElementById('balance');
+    const entriesByDate = {};
 
     ledgerForm.addEventListener('submit', (event) => {
       event.preventDefault();
 
-      const description = document.getElementById('transactionDescription').value;
+      const taskDescription = document.getElementById('taskDescription').value;
       const debit = parseFloat(document.getElementById('debit').value) || 0;
       const credit = parseFloat(document.getElementById('credit').value) || 0;
+      const quantity = parseInt(document.getElementById('quantity').value) || 1;
       const date = document.getElementById('transactionDate').value;
 
-      const newBalance = balance + debit - credit;
+      const totalDebitForEntry = debit * quantity;
+      const totalCreditForEntry = credit * quantity;
 
-      const newRow = document.createElement('tr');
-      newRow.innerHTML = `
-        <td>${date}</td>
-        <td>${description}</td>
-        <td>${debit.toFixed(2)}</td>
-        <td>${credit.toFixed(2)}</td>
-        <td>${newBalance.toFixed(2)}</td>
-        <td><button class="btn-remove" onclick="removeEntry(this)">Remove</button></td>
-      `;
-      ledgerBody.appendChild(newRow);
+      // Calculate new balance
+      const newBalance = balance + totalDebitForEntry - totalCreditForEntry;
 
-      totalDebit += debit;
-      totalCredit += credit;
+      // Group entries by date
+      if (!entriesByDate[date]) {
+        entriesByDate[date] = [];
+      }
+
+      entriesByDate[date].push({
+        taskDescription,
+        debit: totalDebitForEntry,
+        credit: totalCreditForEntry,
+        quantity,
+        balance: newBalance,
+        date
+      });
+
+      // Update the running totals
+      totalDebit += totalDebitForEntry;
+      totalCredit += totalCreditForEntry;
       balance = newBalance;
 
-      totalDebitEl.textContent = totalDebit.toFixed(2);
-      totalCreditEl.textContent = totalCredit.toFixed(2);
-      balanceEl.textContent = balance.toFixed(2);
+      updateLedgerDisplay();
 
+      // Reset the form fields
       ledgerForm.reset();
     });
 
-    function removeEntry(button) {
-      const row = button.parentElement.parentElement;
-      const debit = parseFloat(row.children[2].textContent);
-      const credit = parseFloat(row.children[3].textContent);
+    function updateLedgerDisplay() {
+      ledgerContainer.innerHTML = '';
 
+      // Loop through the entries by date and create the grouped sections
+      for (const date in entriesByDate) {
+        const dateGroup = document.createElement('div');
+        dateGroup.classList.add('date-group');
+
+        const dateHeader = document.createElement('h3');
+        dateHeader.textContent = `Date: ${date}`;
+        dateGroup.appendChild(dateHeader);
+
+        const table = document.createElement('table');
+        const tableHeader = document.createElement('thead');
+        tableHeader.innerHTML = `
+          <tr>
+            <th>Task Description</th>
+            <th>Debit</th>
+            <th>Credit</th>
+            <th>Quantity</th>
+            <th>Balance</th>
+            <th>Action</th>
+          </tr>
+        `;
+        table.appendChild(tableHeader);
+
+        const tableBody = document.createElement('tbody');
+        entriesByDate[date].forEach((entry, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="text" value="${entry.taskDescription}" class="taskDescription" onchange="editEntry(${index}, '${date}', 'taskDescription', this.value)" /></td>
+            <td><input type="number" value="${entry.debit.toFixed(2)}" class="debit" onchange="editEntry(${index}, '${date}', 'debit', parseFloat(this.value))" /></td>
+            <td><input type="number" value="${entry.credit.toFixed(2)}" class="credit" onchange="editEntry(${index}, '${date}', 'credit', parseFloat(this.value))" /></td>
+            <td><input type="number" value="${entry.quantity}" class="quantity" onchange="editEntry(${index}, '${date}', 'quantity', parseInt(this.value))" /></td>
+            <td><input type="number" value="${entry.balance.toFixed(2)}" class="balance" readonly /></td>
+            <td><button class="btn-remove" onclick="removeEntry('${date}', ${index})">Remove</button></td>
+          `;
+          tableBody.appendChild(row);
+        });
+        table.appendChild(tableBody);
+
+        dateGroup.appendChild(table);
+        ledgerContainer.appendChild(dateGroup);
+      }
+
+      // Update the totals
+      totalDebitEl.textContent = totalDebit.toFixed(2);
+      totalCreditEl.textContent = totalCredit.toFixed(2);
+      balanceEl.textContent = balance.toFixed(2);
+    }
+
+    function removeEntry(date, index) {
+      const entry = entriesByDate[date][index];
+      const debit = entry.debit;
+      const credit = entry.credit;
+
+      // Remove the entry from the date's group
+      entriesByDate[date].splice(index, 1);
+
+      // Update the totals and balance
       totalDebit -= debit;
       totalCredit -= credit;
       balance -= debit - credit;
 
-      row.remove();
+      // If no entries are left for the date, remove the entire date group
+      if (entriesByDate[date].length === 0) {
+        delete entriesByDate[date];
+      }
 
-      totalDebitEl.textContent = totalDebit.toFixed(2);
-      totalCreditEl.textContent = totalCredit.toFixed(2);
-      balanceEl.textContent = balance.toFixed(2);
+      updateLedgerDisplay();
+    }
+
+    function editEntry(index, date, field, newValue) {
+      const entry = entriesByDate[date][index];
+      entry[field] = newValue;
+
+      // Recalculate the debit, credit, and balance after editing
+      const totalDebitForEntry = entry.debit * entry.quantity;
+      const totalCreditForEntry = entry.credit * entry.quantity;
+      entry.balance = totalDebitForEntry - totalCreditForEntry;
+
+      // Recalculate the running totals
+      totalDebit = 0;
+      totalCredit = 0;
+      balance = 0;
+
+      // Update the entries and totals
+      for (const dateKey in entriesByDate) {
+        entriesByDate[dateKey].forEach(entry => {
+          totalDebit += entry.debit;
+          totalCredit += entry.credit;
+          balance += entry.balance;
+        });
+      }
+
+      updateLedgerDisplay();
     }
   </script>
 </body>
