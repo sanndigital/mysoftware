@@ -1,12 +1,24 @@
 <?php
 $prompt = $_POST['prompt'] ?? '';
 
-// This is just a placeholder. Replace it with your actual AI call.
-$filename = 'output.png';
+if (empty($prompt)) {
+    echo 'Error: No prompt given.';
+    exit;
+}
 
-// Call to Python AI backend (for real generation)
+// Ensure folder exists
+$folder = 'generated/';
+if (!is_dir($folder)) {
+    mkdir($folder);
+}
+
+// Unique filename
+$filename = $folder . 'img_' . time() . '.png';
+
+// Call Python AI generator
 $escapedPrompt = escapeshellarg($prompt);
-exec("python3 ai_generate.py $escapedPrompt $filename");
+$escapedFilename = escapeshellarg($filename);
+exec("python3 ai_generate.py $escapedPrompt $escapedFilename");
 
-// Return the generated image URL
+// Return path to frontend
 echo $filename;
