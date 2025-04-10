@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Designer</title>
+  <title>AI Design Generator</title>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 50px; }
     #output img { max-width: 100%; border-radius: 10px; margin-top: 20px; }
     #loading { display: none; font-weight: bold; color: green; }
+    #download { display: none; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -15,11 +16,13 @@
   <button onclick="submitPrompt()">Generate</button>
   <div id="loading">Generating your design...</div>
   <div id="output"></div>
+  <a id="download" href="#" download="ai_design.png">Download Image</a>
 
   <script>
     function submitPrompt() {
       const prompt = document.getElementById('prompt').value;
       document.getElementById('loading').style.display = 'block';
+      document.getElementById('download').style.display = 'none';
       fetch('generate.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -28,7 +31,10 @@
       .then(res => res.text())
       .then(data => {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('output').innerHTML = `<img src="${data}" alt="Generated Image">`;
+        const imageUrl = data.trim();
+        document.getElementById('output').innerHTML = `<img src="${imageUrl}" alt="Generated Image">`;
+        document.getElementById('download').href = imageUrl;
+        document.getElementById('download').style.display = 'inline-block';
       });
     }
   </script>
