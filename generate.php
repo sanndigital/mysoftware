@@ -6,19 +6,24 @@ if (empty($prompt)) {
     exit;
 }
 
-// Ensure folder exists
 $folder = 'generated/';
 if (!is_dir($folder)) {
-    mkdir($folder);
+    mkdir($folder, 0777, true);
 }
 
-// Unique filename
 $filename = $folder . 'img_' . time() . '.png';
-
-// Call Python AI generator
 $escapedPrompt = escapeshellarg($prompt);
 $escapedFilename = escapeshellarg($filename);
-exec("python3 ai_generate.py $escapedPrompt $escapedFilename");
 
-// Return path to frontend
+$command = "python3 ai_generate.py $escapedPrompt $escapedFilename";
+$output = [];
+$return_var = 0;
+exec($command, $output, $return_var);
+
+if ($return_var !== 0) {
+    echo "Error generating image. Code: $return_var";
+    file_put_contents("error.log", implode("\n", $output));
+    exit;
+}
+
 echo $filename;
